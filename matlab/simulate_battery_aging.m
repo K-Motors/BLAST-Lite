@@ -117,13 +117,17 @@ for scenarioIdx = idx
         opts.EmptyLineRule = "read";
         % Import the data
         cycle = readtable(['Application profiles/', scenario], opts);
+
+        %Removing Downsampling
         % Downsample the data from (assumed) 1 second resolution
-        cycle = cycle(1:30:height(cycle), :);
+        %cycle = cycle(1:30:height(cycle), :);
+        cycle = cycle(1:1:height(cycle), :);
         % Ensure SOC beginning and end points are identical
         assert(cycle.soc(1) - cycle.soc(end) < 1e-2, "Start and end SOC of application profile must be within 1% for realistic simulation.")
         % Repeat the profile for 1 year
         cycle = repmat(cycle, ceil((3600*24*365)/cycle.tsec(end)), 1);
-        cycle.tsec(:) = 0:30:(30*(height(cycle)-1));
+        %cycle.tsec(:) = 0:30:(30*(height(cycle)-1));
+        cycle.tsec(:) = 0:1:(1*(height(cycle)-1));
         cycle = cycle(cycle.tsec <= 3600*24*365, :);
     else
         error('Application file-type not recognized.')
@@ -220,7 +224,7 @@ for scenarioIdx = idx
                     plot(lifeSim.t./365, lifeSim.q, '-k', 'LineWidth', 1.5)
                     plot(lifeSim.t./365, lifeSim.q_LLI, ':b', 'LineWidth', 1.5)
                     plot(lifeSim.t./365, lifeSim.q_LAM, ':m', 'LineWidth', 1.5)
-                    xlabel('Time (years)'); ylabel('Relative discharge capacity');  axis([0 tYears 0.7 1.02])
+                    xlabel('Time (years)'); ylabel('Relative  discharge capacity');  axis([0 tYears 0.7 1.02])
                     legend('Overall', 'Lithium Inventory', 'Active Material', 'Location', 'southwest')
                     nexttile; box on; hold on;
                     plot(lifeSim.t./365, lifeSim.r, '-k', 'LineWidth', 1.5)
