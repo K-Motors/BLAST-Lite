@@ -1,9 +1,16 @@
+% K-Motors adaptation
+% Downsampling modified only with NMC
+% output plot modified 
+
 clear; clc;
 path(path,'Functions')
 addpath(genpath('Aging scenarios'))
+% Downsampling variable
+KM_Dwonsampling = 1;
+KM_dt = 24*3600 ; % by day = 24*3600 ; by hours = 3600 ; by min = 60
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 0) Select model and load parameters for battery life (degradation),
+%% 0) Select model and load parameters for battery life (degradation),
 %    performance (ocv relationships), and load aging test data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 validModels = {...
@@ -18,7 +25,7 @@ idxModels = listdlg('ListString', validModels,...
 assert(~isempty(idxModels), "Must select a model.")
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 1) Select application profile to simulate
+%% 1) Select application profile to simulate
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 applicationProfiles =  dir('Application profiles/*.mat');
 driveCycles = dir('Application profiles\*.csv');
@@ -31,10 +38,10 @@ assert(~isempty(idx), "Must select an application profile.")
 % Ask for user options
 inputs = {'Ambient temperature in Celsius (-Inf to select a climate):', 'Simulation length in years:'};
 dims = [1 50];
-defaults = {'-Inf', '20'};
+defaults = {'20', '5'};
 out = inputdlg(inputs, 'Specify simulation options.', dims, defaults);
 TdegC = str2double(out{1});
-dtdays = 1;
+dtdays = 1; 
 tYears = str2double(out{2});
 if TdegC == -Inf
     load('Climate data\Top100MSA_hourlyClimateData.mat', 'TMY_data_locations','TMY_ambTemp_degC')
@@ -66,7 +73,7 @@ end
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% 2) Loop through selected data
+%% 2) Loop through selected data
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % struct to store outputs:
 simulations = struct(); simIdx = 1;
@@ -118,28 +125,28 @@ for scenarioIdx = idx
         % Import the data
         cycle = readtable(['Application profiles/', scenario], opts);
 
-        %Removing Downsampling
-        % Downsample the data from (assumed) 1 second resolution
-        %cycle = cycle(1:30:height(cycle), :);
-        cycle = cycle(1:1:height(cycle), :);
+        % Downsampling variable
+        cycle = cycle(1:KM_Dwonsampling:height(cycle), :);
         % Ensure SOC beginning and end points are identical
         assert(cycle.soc(1) - cycle.soc(end) < 1e-2, "Start and end SOC of application profile must be within 1% for realistic simulation.")
         % Repeat the profile for 1 year
         cycle = repmat(cycle, ceil((3600*24*365)/cycle.tsec(end)), 1);
-        %cycle.tsec(:) = 0:30:(30*(height(cycle)-1));
-        cycle.tsec(:) = 0:1:(1*(height(cycle)-1));
+        cycle.tsec(:) = 0:KM_Dwonsampling:(KM_Dwonsampling*(height(cycle)-1));
         cycle = cycle(cycle.tsec <= 3600*24*365, :);
     else
         error('Application file-type not recognized.')
     end
 
-    % Extract stress statistics for this scenario
-    cycleLengthDays = round(cycle.tsec(end)./(24*3600));
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    %% Extract stress statistics for this scenario
+    cycleLengthDays = round(cycle.tsec(end)./(KM_dt));
+
     for iClimate = 1:length(TdegC)
         % 7 output stressors x number of days
         stressors = zeros(ceil(cycleLengthDays/dtdays), 7);
-        % temperature
+        % temperature  
         if iscell(TdegC)
+            % interpolation by sec from hourly report data on a year
             TdegC_cycle = TdegC{iClimate};
             t_sec_TdegC = [1:8760].*3600;
             cycle.TdegC = makima(t_sec_TdegC, TdegC_cycle, cycle.tsec);
@@ -162,11 +169,11 @@ for scenarioIdx = idx
             end
             % Break the long supercycle up into a smaller cycle for this timestep
             startDaySubcycle = mod(iDay-1, cycleLengthDays);
-            [~, ind_start] = min(abs(cycle.tsec - startDaySubcycle*24*3600));
-            [~, ind_end] = min(abs(cycle.tsec - (startDaySubcycle + dtdays)*24*3600));
+            [~, ind_start] = min(abs(cycle.tsec - startDaySubcycle*KM_dt));
+            [~, ind_end] = min(abs(cycle.tsec - (startDaySubcycle + dtdays)*KM_dt));
             subcycle = struct();
             subcycle.tsec  = cycle.tsec(ind_start:ind_end) - cycle.tsec(ind_start);
-            subcycle.t = subcycle.tsec ./ (24*3600);
+            subcycle.t = subcycle.tsec ./ (KM_dt);
             subcycle.soc   = cycle.soc(ind_start:ind_end);
             subcycle.TdegC   = cycle.TdegC(ind_start:ind_end);
             if length(subcycle.t) == 1
@@ -206,49 +213,10 @@ for scenarioIdx = idx
             disp("Running " + model + " battery life simulation...")
             lifeMdl = func_LifeMdl_LoadParameters(model);
 
-            % Run life simulation
+            %% Run life simulation
             lifeSim = runLifeSim(lifeMdl, stressors, tYears);
     
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            % 5) Plot outputs
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            figure; tl = tiledlayout(2,1);
-            if iscell(TdegC)
-                title(tl, sprintf("Model: %s\nApplication: %s\nClimate: %s", model, scenario, climates{iClimate}), 'Interpreter', 'none')
-            else
-                title(tl, sprintf("Model: %s\nApplication: %s\nClimate: %d C", model, scenario, TdegC), 'Interpreter', 'none')
-            end
-            switch model
-                case 'NMC|Gr'
-                    nexttile; box on; hold on;
-                    plot(lifeSim.t./365, lifeSim.q, '-k', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, lifeSim.q_LLI, ':b', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, lifeSim.q_LAM, ':m', 'LineWidth', 1.5)
-                    xlabel('Time (years)'); ylabel('Relative  discharge capacity');  axis([0 tYears 0.7 1.02])
-                    legend('Overall', 'Lithium Inventory', 'Active Material', 'Location', 'southwest')
-                    nexttile; box on; hold on;
-                    plot(lifeSim.t./365, lifeSim.r, '-k', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, lifeSim.r_LLI, ':b', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, lifeSim.r_LAM, ':m', 'LineWidth', 1.5)
-                    xlabel('Time (years)'); ylabel('Relative DC resistance');  axis([0 tYears 0.98 4])
-                    legend('Overall', 'Lithium Inventory', 'Active Material', 'Location', 'northwest')
-                case 'LFP|Gr'
-                    nexttile; box on; hold on;
-                    plot(lifeSim.t./365, lifeSim.q, '-k', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, 1-lifeSim.qLossCal, ':b', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, 1-lifeSim.qLossCyc, ':m', 'LineWidth', 1.5)
-                    xlabel('Time (years)'); ylabel('Relative discharge capacity');  axis([0 tYears 0.7 1.02])
-                    legend('Overall', 'Calendar degradation', 'Cycling degradation', 'Location', 'southwest')
-                    nexttile; box on; hold on;
-                    plot(lifeSim.t./365, lifeSim.r, '-k', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, 1+lifeSim.rGainCal, ':b', 'LineWidth', 1.5)
-                    plot(lifeSim.t./365, 1+lifeSim.rGainCyc, ':m', 'LineWidth', 1.5)
-                    xlabel('Time (years)'); ylabel('Relative DC resistance');  axis([0 tYears 0.98 2])
-                    legend('Overall', 'Calendar degradation', 'Cycling degradation', 'Location', 'northwest')
-            end
-    
-            %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-            % 5) Store outputs in struct
+            %% 5) Store outputs in struct
             %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
             simulations(simIdx).model = model;
             simulations(simIdx).application = scenario;
@@ -269,9 +237,11 @@ for scenarioIdx = idx
     end
 end
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% Export result in Excel File
 disp(" ")
 disp('Exporting simulation results to file.')
-fnameout = "Simulation results\battery life simulation " + string(datetime("now", "Format", "yyyy-MM-dd-HH-mm-ss")) + ".xls";
+fnameout = "Simulation results\BLAST_result_" + string(datetime("now", "Format", "yyyy-MM-dd-HH-mm-ss")) + ".xls";
 warning('off')
 for i = 1:length(simulations)
     c = {...
@@ -291,7 +261,11 @@ for i = 1:length(simulations)
     end
     switch simulations(i).model
         case 'NMC|Gr'
-            columnheaders = {'t','EFC','q','q_LLI','q_LAM','r','r_LLI','r_LAM'};
+            KM_Bat_read = strsplit(simulations(i).application,'_');
+            KM_Bat = KM_Bat_read{1};
+            columnheaders = {['t_',KM_Bat],['EFC_',KM_Bat],['q_',KM_Bat],...
+                ['q_LLI_',KM_Bat],['q_LAM_',KM_Bat],['r_',KM_Bat],['r_LLI_',KM_Bat],['r_LAM_',KM_Bat]};
+
             writecell(columnheaders, fnameout, 'Sheet', i, 'WriteMode', 'append')
             columnvalues = [...
                 simulations(i).results.t';...
@@ -320,6 +294,9 @@ for i = 1:length(simulations)
             writematrix(columnvalues, fnameout, 'Sheet', i, 'WriteMode', 'append')
     end
 end
+%% 5) Plot outputs
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+run KM_plot.m
 
 %% Helper functions:
 function lifeSim = runLifeSim(lifeMdl, stressors, t_years)
