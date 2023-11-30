@@ -1,6 +1,9 @@
 % K-Motors adaptation
 % Downsampling modified only with NMC
-% output plot modified 
+% Output modified 
+% Plot modified
+% Made to work with two profiles selected: KBat and RefBat
+
 
 clear; clc;
 path(path,'Functions')
