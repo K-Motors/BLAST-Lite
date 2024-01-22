@@ -41,7 +41,7 @@ assert(~isempty(idx), "Must select an application profile.")
 % Ask for user options
 inputs = {'Ambient temperature in Celsius (-Inf to select a climate):', 'Simulation length in years:'};
 dims = [1 50];
-defaults = {'20', '5'};
+defaults = {'20', '20'};
 out = inputdlg(inputs, 'Specify simulation options.', dims, defaults);
 TdegC = str2double(out{1});
 dtdays = 1; 

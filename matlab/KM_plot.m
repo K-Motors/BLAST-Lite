@@ -10,10 +10,10 @@ for i = 1:length(simulations)
 
     plot(simulations(i).results.t./365, simulations(i).results.q, 'LineWidth', 1.5)
     
-    legendInfo{i} = ['Overall_',KM_Bat]; % Create legend
+    legendInfo{i} = ['-',KM_Bat]; % Create legend
 
 end
-xlabel('Time (years)'); ylabel('Relative  discharge capacity');  axis([0 tYears 0.7 1.02])
+xlabel('Time (years)'); ylabel('Relative  discharge capacity');  axis([0 tYears 0.8 1.02])
 legend(legendInfo, 'Location', 'southwest')
 
 nexttile; box on; hold on;
