@@ -3,7 +3,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-cycle = pd.read_csv('Cycle/KBat_SOC_Daily-Toyota_x130.csv')
+
+from nmc111_gr_Kokam75Ah_2017 import Nmc111_Gr_Kokam75Ah_Battery
+
+cycle = pd.read_csv('Cycle/KBat_SOC_SKODA.csv')
 
 soc = cycle.soc
 t_secs = cycle.tsec
