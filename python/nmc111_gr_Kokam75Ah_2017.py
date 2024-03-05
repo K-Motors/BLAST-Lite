@@ -1,7 +1,7 @@
 # Paul Gasper, NREL
 import numpy as np
-from BLAST_Lite.functions.extract_stressors import extract_stressors
-from BLAST_Lite.functions.state_functions import update_power_state, update_sigmoid_state
+from functions.extract_stressors import extract_stressors
+from functions.state_functions import update_power_state, update_sigmoid_state
 
 # EXPERIMENTAL AGING DATA SUMMARY:
 # Aging test matrix varied primarly temperature, with small DOD variation.

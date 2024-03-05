@@ -3,8 +3,8 @@
 # http://dx.doi.org/10.1016/j.jpowsour.2014.02.012
 
 import numpy as np
-from BLAST_Lite.functions.extract_stressors import extract_stressors
-from BLAST_Lite.functions.state_functions import update_power_state
+from functions.extract_stressors import extract_stressors
+from functions.state_functions import update_power_state
 
 # EXPERIMENTAL AGING DATA SUMMARY:
 # Calendar aging varied SOC at 50 Celsius, and temperature at 50% state-of-charge.

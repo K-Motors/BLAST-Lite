@@ -6,8 +6,8 @@
 # I'm not aware of any study conducting both calendar aging and cycle aging of these cells.
 
 import numpy as np
-from BLAST_Lite.functions.extract_stressors import extract_stressors
-from BLAST_Lite.functions.state_functions import update_power_state
+from functions.extract_stressors import extract_stressors
+from functions.state_functions import update_power_state
 
 # EXPERIMENTAL AGING DATA SUMMARY:
 # Calendar aging widely varied SOC at 25, 40, and 50 Celsius. 300 days max.

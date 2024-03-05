@@ -4,8 +4,8 @@
 # Cell tests were reported in early 2020, so likely 2018 or 2019 LG MJ1 cells.
 
 import numpy as np
-from BLAST_Lite.functions.extract_stressors import extract_stressors
-from BLAST_Lite.functions.state_functions import update_power_state
+from functions.extract_stressors import extract_stressors
+from functions.state_functions import update_power_state
 
 # EXPERIMENTAL AGING DATA SUMMARY:
 # Calendar aging varied SOC (10%, 70%, 90%) and temperature.

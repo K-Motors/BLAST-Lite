@@ -6,8 +6,8 @@
 # of 70%. So the model reports q and qNew, where qNew is relative to initial
 
 import numpy as np
-from BLAST_Lite.functions.extract_stressors import extract_stressors
-from BLAST_Lite.functions.state_functions import update_power_state
+from functions.extract_stressors import extract_stressors
+from functions.state_functions import update_power_state
 
 # EXPERIMENTAL AGING DATA SUMMARY:
 # Calendar aging widely varied SOC and temperature.

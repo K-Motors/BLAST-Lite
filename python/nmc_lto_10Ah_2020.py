@@ -3,8 +3,8 @@
 # https://doi.org/10.1016/j.jpowsour.2020.228566
 
 import numpy as np
-from BLAST_Lite.functions.extract_stressors import extract_stressors
-from BLAST_Lite.functions.state_functions import update_power_state
+from functions.extract_stressors import extract_stressors
+from functions.state_functions import update_power_state
 
 # EXPERIMENTAL AGING DATA SUMMARY:
 # Calendar aging varies temperature and SOC. There is almost no calendar aging impact
