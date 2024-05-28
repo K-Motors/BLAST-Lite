@@ -1,0 +1,56 @@
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+
+
+years = 15
+days = years * 365
+hours = days * 24
+secs = hours * 3600
+t_hours = np.arange(hours + 1)
+t_secs = np.arange(secs)
+
+# Cycle batterie de référence
+cycle = pd.read_csv('Cycle/Alpine/A290_MontagneNoLimit_Recharge20kW_x3_RefBat.csv')
+soc = cycle.soc
+soc = np.delete(soc, -1)
+soc = np.tile(soc,days)
+
+TdegC = cycle.TdegC
+TdegC = np.delete(TdegC, -1)
+TdegC = np.tile(TdegC,days)
+
+# Cycle batterie avec KM
+cycle = pd.read_csv('Cycle/Alpine/A290_MontagneNoLimit_Recharge20kW_x3_KBat.csv')
+soc_km = cycle.soc
+soc_km = np.delete(soc_km, -1)
+soc_km = np.tile(soc_km,days)
+
+TdegC_km = cycle.TdegC
+TdegC_km = np.delete(TdegC_km, -1)
+TdegC_km = np.tile(TdegC_km,days)
+
+
+from nmc111_gr_Kokam75Ah_2017 import Nmc111_Gr_Kokam75Ah_Battery
+cell = Nmc111_Gr_Kokam75Ah_Battery()
+cell_km = Nmc111_Gr_Kokam75Ah_Battery()
+
+
+t_days = np.arange(days)
+for day in t_days:
+    sec_start = day*24*3600
+    sec_end = (day+1)*24*3600 + 1
+    # Update battery state
+    cell.update_battery_state(t_secs=t_secs[sec_start:sec_end], soc=soc[sec_start:sec_end], T_celsius=TdegC[sec_start:sec_end])
+    cell_km.update_battery_state(t_secs=t_secs[sec_start:sec_end], soc=soc_km[sec_start:sec_end], T_celsius=TdegC_km[sec_start:sec_end])
+
+
+plt.figure(dpi=150) # Plot Quality
+plt.plot(cell.stressors['t_days']/365, cell.outputs['q'])
+plt.plot(cell_km.stressors['t_days']/365, cell_km.outputs['q'])
+plt.xlabel('Time (years)')
+plt.ylabel('Relative discharge capacity')
+plt.legend(['Battery','Battery with K-Motors'])
+plt.ylim((0.7, 1.02))
+plt.grid()
+plt.show()
